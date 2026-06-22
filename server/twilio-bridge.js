@@ -823,7 +823,7 @@ class CallSession {
 // 6. HTTP + WebSocket server
 // ---------------------------------------------------------------------------
 
-const PORT = process.env.TWILIO_BRIDGE_PORT || 3001;
+const PORT = process.env.PORT || process.env.TWILIO_BRIDGE_PORT || 3001;
 
 const httpServer = http.createServer((req, res) => {
   const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);

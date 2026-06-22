@@ -7,9 +7,9 @@ function generateTwiML(request: NextRequest): NextResponse {
     const callId = searchParams.get('callId') || ''
     const businessId = searchParams.get('businessId') || ''
 
-    const NGROK_URL = process.env.NGROK_URL || process.env.NEXT_PUBLIC_APP_URL || ''
+    const bridgeUrl = process.env.NEXT_PUBLIC_BRIDGE_URL || process.env.NGROK_URL || process.env.NEXT_PUBLIC_APP_URL || ''
     // Convert https:// URL to wss:// host for WebSocket stream
-    const wsHost = NGROK_URL.replace('https://', '').replace('http://', '')
+    const wsHost = bridgeUrl.replace('https://', '').replace('http://', '')
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
