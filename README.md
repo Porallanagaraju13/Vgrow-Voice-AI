@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./public/saas-demo-video.png" alt="VgrowVoice Banner" width="100%" style="border-radius: 12px; margin-bottom: 20px;" />
+  <img src="./public/logo-banner.png" alt="VgrowVoice Banner" width="100%" style="border-radius: 12px; margin-bottom: 20px;" />
 
   # 🎙️ VgrowVoice AI
   ### The Intelligent Voice Receptionist & Lead Capture SaaS
