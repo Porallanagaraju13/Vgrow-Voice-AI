@@ -4,7 +4,6 @@ import { useParams } from 'next/navigation'
 import { formsService } from '@/services/forms'
 import { CampaignForm } from '@/types'
 import { Card, CardContent } from '@/components/ui/Card'
-import { Input } from '@/components/ui/Input'
 
 export default function PublicCampaignForm() {
   const params = useParams()
@@ -28,7 +27,7 @@ export default function PublicCampaignForm() {
       const data = await formsService.getForm(formId)
       if (!data) throw new Error('Form not found')
       setForm(data)
-    } catch (err) {
+    } catch {
       setError('This form is invalid or no longer active.')
     } finally {
       setLoading(false)
@@ -61,8 +60,9 @@ export default function PublicCampaignForm() {
       }
 
       setSubmitted(true)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      const error = err as Error
+      setError(error.message)
       setSubmitting(false)
     }
   }
@@ -139,6 +139,7 @@ export default function PublicCampaignForm() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="John Doe"
                   className="w-full h-14 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 focus:outline-none focus:ring-2 transition-shadow placeholder:text-slate-400"
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   style={{ '--tw-ring-color': `${form.brand_color}40` } as any}
                 />
               </div>
@@ -152,6 +153,7 @@ export default function PublicCampaignForm() {
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+1 (555) 000-0000"
                   className="w-full h-14 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 focus:outline-none focus:ring-2 transition-shadow placeholder:text-slate-400"
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   style={{ '--tw-ring-color': `${form.brand_color}40` } as any}
                 />
               </div>

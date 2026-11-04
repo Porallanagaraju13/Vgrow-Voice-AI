@@ -32,8 +32,9 @@ export default function NewCampaignPage() {
         status: 'active'
       })
       router.push('/dashboard/campaigns')
-    } catch (err: any) {
-      setError(err.message || 'Failed to create form')
+    } catch (err: unknown) {
+      const error = err as Error
+      setError(error.message || 'Failed to create form')
       setLoading(false)
     }
   }

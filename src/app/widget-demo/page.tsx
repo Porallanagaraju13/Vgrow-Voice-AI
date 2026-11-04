@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Bot, Sparkles, PhoneCall, Zap, PlayCircle, BarChart3, LayoutDashboard, Globe2 } from 'lucide-react'
+import { Bot, Sparkles, PhoneCall, PlayCircle, BarChart3, LayoutDashboard, Globe2 } from 'lucide-react'
 
 export default function WidgetDemoPage() {
   const [agentId, setAgentId] = useState<string | null>(null)

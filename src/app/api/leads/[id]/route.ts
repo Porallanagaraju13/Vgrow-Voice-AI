@@ -29,6 +29,7 @@ export async function PATCH(
 
     // Only allow updating specific fields
     const allowedFields = ['name', 'phone', 'company', 'notes', 'status', 'last_called_at']
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updates: Record<string, any> = {}
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
@@ -58,9 +59,10 @@ export async function PATCH(
     }
 
     return NextResponse.json(data)
-  } catch (err: any) {
+  } catch (err: unknown) {
+      const error = err as Error
     console.error('Lead PATCH API error:', err)
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -92,8 +94,9 @@ export async function DELETE(
     }
 
     return NextResponse.json({ success: true })
-  } catch (err: any) {
+  } catch (err: unknown) {
+      const error = err as Error
     console.error('Lead DELETE API error:', err)
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }

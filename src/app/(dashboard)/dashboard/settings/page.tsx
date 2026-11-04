@@ -34,8 +34,9 @@ export default function SettingsPage() {
         setToastMessage('Settings updated successfully!')
         setToastType('success')
       }
-    } catch (err: any) {
-      setToastMessage(err.message || 'Error updating settings')
+    } catch (err: unknown) {
+      const error = err as Error
+      setToastMessage(error.message || 'Error updating settings')
       setToastType('error')
     } finally {
       setLoading(false)
@@ -134,7 +135,7 @@ export default function SettingsPage() {
 }`}
               </pre>
               <p className="text-xs text-slate-500 mt-2">
-                Configure your Meta/Google ad form to send the lead's name and phone number in this exact format. 
+                Configure your Meta/Google ad form to send the lead&apos;s name and phone number in this exact format. 
                 Your <b>business_id</b> is hardcoded above to ensure the lead is routed to your specific AI Agent.
               </p>
             </div>

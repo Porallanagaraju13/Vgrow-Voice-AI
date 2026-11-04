@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/Card'
-import { businessService } from '@/services/business'
 
 const industries = [
   { value: 'auto_repair', label: 'Auto Repair Shop' },
@@ -68,8 +67,9 @@ export default function SignupPage() {
       }
 
       router.push('/dashboard')
-    } catch (err: any) {
-      setError(err.message || 'Error configuring business profile')
+    } catch (err: unknown) {
+      const error = err as Error
+      setError(error.message || 'Error configuring business profile')
       setLoading(false)
     }
   }

@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useBusinessStore } from '@/store/business'
 import { servicesService } from '@/services/services'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/Table'
 import { Modal } from '@/components/ui/Modal'
@@ -33,6 +33,7 @@ export default function ServicesPage() {
     setIsModalOpen(true)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleOpenEdit = (svc: any) => {
     setEditingId(svc.id)
     setName(svc.name)
@@ -63,8 +64,9 @@ export default function ServicesPage() {
         }
       }
       setIsModalOpen(false)
-    } catch (err: any) {
-      setToastMessage(err.message || 'Error saving service')
+    } catch (err: unknown) {
+      const error = err as Error
+      setToastMessage(error.message || 'Error saving service')
       setToastType('error')
     } finally {
       setLoading(false)
@@ -95,7 +97,7 @@ export default function ServicesPage() {
         <CardContent className="pt-6">
           {services.length === 0 ? (
             <div className="text-center py-12 text-sm text-slate-400 italic">
-              No services added yet. Add items like "Dent Repair" or "Routine Diagnostics".
+              No services added yet. Add items like &quot;Dent Repair&quot; or &quot;Routine Diagnostics&quot;.
             </div>
           ) : (
             <Table>

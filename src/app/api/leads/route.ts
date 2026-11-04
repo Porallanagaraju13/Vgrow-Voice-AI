@@ -44,9 +44,10 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(data || [])
-  } catch (err: any) {
+  } catch (err: unknown) {
+      const error = err as Error
     console.error('Leads GET error:', err)
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
 
     // Bulk import
     if (body.leads && Array.isArray(body.leads)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const leadsToInsert = body.leads.map((lead: any) => ({
         business_id: user.id,
         name: lead.name,
@@ -110,8 +112,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(data)
-  } catch (err: any) {
+  } catch (err: unknown) {
+      const error = err as Error
     console.error('Leads POST error:', err)
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }

@@ -23,6 +23,7 @@ export const conversationsService = {
     const inbound = inboundData || []
     
     // Map outbound calls to match Conversation interface loosely so the UI handles it smoothly
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const outboundAsConversations = (outboundData || []).map((ob: any) => ({
       id: ob.id,
       business_id: ob.business_id,

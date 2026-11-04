@@ -15,7 +15,6 @@ import {
   Settings,
   Users,
   PhoneOutgoing,
-  AudioLines,
   X,
   Megaphone
 } from 'lucide-react'

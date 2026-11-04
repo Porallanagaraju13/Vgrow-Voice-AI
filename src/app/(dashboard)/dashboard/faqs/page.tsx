@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useBusinessStore } from '@/store/business'
 import { faqsService } from '@/services/faqs'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/Table'
 import { Modal } from '@/components/ui/Modal'
@@ -29,6 +29,7 @@ export default function FAQsPage() {
     setIsModalOpen(true)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleOpenEdit = (faq: any) => {
     setEditingFaqId(faq.id)
     setQuestion(faq.question)
@@ -57,8 +58,9 @@ export default function FAQsPage() {
         }
       }
       setIsModalOpen(false)
-    } catch (err: any) {
-      setToastMessage(err.message || 'Error saving FAQ')
+    } catch (err: unknown) {
+      const error = err as Error
+      setToastMessage(error.message || 'Error saving FAQ')
       setToastType('error')
     } finally {
       setLoading(false)

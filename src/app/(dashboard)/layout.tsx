@@ -4,7 +4,6 @@ import BusinessProvider from '@/providers/BusinessProvider'
 import Sidebar from '@/components/dashboard/Sidebar'
 import Navbar from '@/components/dashboard/Navbar'
 import { useBusinessStore } from '@/store/business'
-import { cn } from '@/lib/utils'
 import { LoadingWave } from '@/components/ui/LoadingWave'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

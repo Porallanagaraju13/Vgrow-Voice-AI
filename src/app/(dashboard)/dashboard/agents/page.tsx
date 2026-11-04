@@ -28,7 +28,7 @@ const presetPrompts = {
 }
 
 export default function AgentsPage() {
-  const { agents, addAgent, updateAgent, deleteAgent, business } = useBusinessStore()
+  const { agents, addAgent, updateAgent, deleteAgent } = useBusinessStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [toastType, setToastType] = useState<'success' | 'error'>('success')
@@ -50,6 +50,7 @@ export default function AgentsPage() {
     try {
       const created = await agentsService.createAgent({
         name,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         voice: voice as any,
         system_prompt: systemPrompt,
         tonality,
@@ -66,8 +67,9 @@ export default function AgentsPage() {
         setToastMessage('Agent created successfully!')
         setToastType('success')
       }
-    } catch (err: any) {
-      setToastMessage(err.message || 'Error creating agent')
+    } catch (err: unknown) {
+      const error = err as Error
+      setToastMessage(error.message || 'Error creating agent')
       setToastType('error')
     } finally {
       setLoading(false)
@@ -110,7 +112,7 @@ export default function AgentsPage() {
         {agents.length === 0 ? (
           <div className="col-span-full py-12">
             <Card className="text-center p-8 border-dashed border-slate-200">
-              <p className="text-sm text-slate-500 italic">No agents configured. Click "Create Agent" to get started.</p>
+              <p className="text-sm text-slate-500 italic">No agents configured. Click &quot;Create Agent&quot; to get started.</p>
             </Card>
           </div>
         ) : (

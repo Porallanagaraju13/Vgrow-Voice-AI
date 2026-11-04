@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-const twilio = require('twilio')
+import twilio from 'twilio'
 
 // Map Twilio status values to our database status enum
 function mapTwilioStatus(twilioStatus: string): string {

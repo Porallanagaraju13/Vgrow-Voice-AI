@@ -19,7 +19,9 @@ export const widgetsService = {
     }
 
     const businessId = agent.business_id
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const businessName = (agent as any).business?.name || 'Our Partner Business'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const geminiApiKey = (agent as any).business?.gemini_api_key
 
     // Fetch FAQs

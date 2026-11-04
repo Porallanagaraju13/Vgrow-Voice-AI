@@ -1,12 +1,11 @@
 import * as React from 'react'
-import { cn } from '@/lib/utils'
 
 export interface ToggleProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
 }
 
 export const Toggle = React.forwardRef<HTMLInputElement, ToggleProps>(
-  ({ className, label, ...props }, ref) => {
+  ({ label, ...props }, ref) => {
     return (
       <label className="inline-flex items-center cursor-pointer select-none space-x-2">
         <div className="relative">

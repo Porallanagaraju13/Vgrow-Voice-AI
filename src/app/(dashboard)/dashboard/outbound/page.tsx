@@ -4,8 +4,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/Table'
 import { Modal } from '@/components/ui/Modal'
-import { Badge } from '@/components/ui/Badge'
-import { PhoneOutgoing, Play, MessageSquare, Clock, CheckCircle, Loader2, BarChart3 } from 'lucide-react'
+import { PhoneOutgoing, MessageSquare, Clock, CheckCircle, Loader2 } from 'lucide-react'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */

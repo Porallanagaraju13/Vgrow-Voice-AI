@@ -1,8 +1,7 @@
-import { useRef, useState, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { useVoiceStore } from '@/store/voice'
 import { widgetsService } from '@/services/widgets'
 import { conversationsService } from '@/services/conversations'
-import { Message } from '@/types'
 
 // Helper: base64 to ArrayBuffer
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
@@ -20,7 +19,7 @@ function floatTo16BitPCMBase64(input: Float32Array): string {
   const buffer = new ArrayBuffer(input.length * 2)
   const view = new DataView(buffer)
   for (let i = 0; i < input.length; i++) {
-    let s = Math.max(-1, Math.min(1, input[i]))
+    const s = Math.max(-1, Math.min(1, input[i]))
     view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true)
   }
   const bytes = new Uint8Array(buffer)
@@ -53,10 +52,9 @@ export function useRealtimeVoice(agentId: string) {
   
   // Timing state for seamless audio stitching
   const nextPlayTimeRef = useRef<number>(0)
-  const [activeAgentId, setActiveAgentId] = useState<string>(agentId)
   
   const startTimeRef = useRef<number>(0)
-  const agentConfigRef = useRef<any>(null)
+  const agentConfigRef = useRef<{ agent: { business_id: string } } | null>(null)
   const currentUserTextRef = useRef<string>('')
   const currentAgentTextRef = useRef<string>('')
 
@@ -143,7 +141,7 @@ export function useRealtimeVoice(agentId: string) {
   }, [setWaveData])
 
   // Setup tools inside hook
-  const handleToolCall = useCallback(async (toolCall: any) => {
+  const handleToolCall = useCallback(async (toolCall: { functionCalls?: Array<{ name: string; id: string; args: Record<string, string> }> }) => {
     const { functionCalls } = toolCall
     if (!functionCalls) return
 
@@ -151,13 +149,13 @@ export function useRealtimeVoice(agentId: string) {
 
     for (const call of functionCalls) {
       const { name, id, args } = call
-      let output: any = { error: 'Function not found' }
+      let output: Record<string, unknown> = { error: 'Function not found' }
 
       try {
         if (name === 'get_available_slots') {
           const { date } = args
           // Get config configuration
-          const agentConfig = await widgetsService.getAgentConfig(agentId)
+          const agentConfig: { agent: { business_id: string }; services: Array<{ id: string; name: string }> } | null = await widgetsService.getAgentConfig(agentId)
           if (agentConfig) {
             const slots = await widgetsService.getAvailableSlots(agentConfig.agent.business_id, date)
             output = { slots }
@@ -166,7 +164,7 @@ export function useRealtimeVoice(agentId: string) {
           }
         } else if (name === 'book_appointment') {
           const { customer_name, customer_phone, service_name, date, time } = args
-          const agentConfig = await widgetsService.getAgentConfig(agentId)
+          const agentConfig: { agent: { business_id: string; name: string }; services: Array<{ id: string; name: string }> } | null = await widgetsService.getAgentConfig(agentId)
           
           if (agentConfig) {
             // Find service id
@@ -191,7 +189,7 @@ export function useRealtimeVoice(agentId: string) {
             output = { error: 'Agent profile not loaded' }
           }
         } else if (name === 'get_business_info') {
-          const agentConfig = await widgetsService.getAgentConfig(agentId)
+          const agentConfig: { businessName: string; services: Array<{ name: string; price: number; duration: number }>; faqs: Array<{ question: string; answer: string }> } | null = await widgetsService.getAgentConfig(agentId)
           if (agentConfig) {
             output = {
               business_name: agentConfig.businessName,
@@ -202,8 +200,9 @@ export function useRealtimeVoice(agentId: string) {
             output = { error: 'Agent configuration not loaded' }
           }
         }
-      } catch (err: any) {
-        output = { error: err.message || 'Execution error' }
+      } catch (err: unknown) {
+        const error = err as Error
+        output = { error: error.message || 'Execution error' }
       }
 
       functionResponses.push({
@@ -327,10 +326,11 @@ export function useRealtimeVoice(agentId: string) {
       }
 
       ws.onmessage = async (event) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let msg: any = {}
         try {
           msg = JSON.parse(event.data)
-        } catch (e) {
+        } catch {
           return
         }
 
@@ -393,6 +393,7 @@ export function useRealtimeVoice(agentId: string) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       micStreamRef.current = stream
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
       audioCtxRef.current = audioCtx
 
@@ -433,7 +434,7 @@ export function useRealtimeVoice(agentId: string) {
       source.connect(scriptNode)
       scriptNode.connect(audioCtx.destination)
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Call initialization failed:', err)
       disconnect()
     }

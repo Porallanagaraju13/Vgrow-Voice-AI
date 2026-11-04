@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useBusinessStore } from '@/store/business'
 import { appointmentsService } from '@/services/appointments'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/Table'
 import { Badge } from '@/components/ui/Badge'
@@ -21,7 +21,7 @@ export default function AppointmentsPage() {
         setToastMessage(`Booking status updated to ${status}`)
         setToastType('success')
       }
-    } catch (err) {
+    } catch {
       setToastMessage('Failed to update booking status')
       setToastType('error')
     }

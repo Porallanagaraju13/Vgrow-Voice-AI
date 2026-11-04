@@ -22,7 +22,7 @@ export default function CampaignsPage() {
     try {
       const data = await formsService.getForms()
       setForms(data)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
     } finally {
       setLoading(false)
@@ -36,8 +36,9 @@ export default function CampaignsPage() {
       setToastMessage('Form deleted successfully')
       setToastType('success')
       setForms(forms.filter(f => f.id !== id))
-    } catch (err: any) {
-      setToastMessage(err.message)
+    } catch (err: unknown) {
+      const error = err as Error
+      setToastMessage(error.message)
       setToastType('error')
     }
   }
