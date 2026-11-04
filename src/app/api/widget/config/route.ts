@@ -1,20 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { z } from 'zod'
+
+const configSchema = z.object({
+  agentId: z.string().uuid(),
+})
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const agentId = searchParams.get('agentId')
 
-  if (!agentId) {
-    return NextResponse.json({ error: 'agentId query parameter is required' }, { status: 400 })
+  // Validate input
+  const validation = configSchema.safeParse({ agentId })
+  if (!validation.success) {
+    return NextResponse.json(
+      { error: 'Invalid agentId parameter' },
+      { status: 400 }
+    )
   }
 
-  // Use Admin Client to query database values without browser session context
   const supabase = createAdminClient()
 
   const { data: agent, error: agentError } = await supabase
     .from('agents')
-    .select('*, business:businesses(name, gemini_api_key)')
+    .select('*, business:businesses(name)')
     .eq('id', agentId)
     .eq('is_active', true)
     .single()
@@ -24,8 +33,7 @@ export async function GET(request: NextRequest) {
   }
 
   const businessId = agent.business_id
-  const businessName = (agent as any).business?.name || 'Our Partner Business'
-  const geminiApiKey = (agent as any).business?.gemini_api_key || process.env.NEXT_PUBLIC_GEMINI_API_KEY
+  const businessName = (agent as { business?: { name?: string } }).business?.name || 'Our Partner Business'
 
   const [faqsData, servicesData] = await Promise.all([
     supabase.from('faqs').select('*').eq('business_id', businessId),
@@ -42,7 +50,6 @@ export async function GET(request: NextRequest) {
       business_id: agent.business_id
     },
     businessName,
-    geminiApiKey,
     faqs: faqsData.data || [],
     services: servicesData.data || []
   })

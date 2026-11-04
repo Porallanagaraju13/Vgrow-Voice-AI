@@ -38,14 +38,15 @@ try {
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const BRIDGE_TOKEN_SECRET = process.env.BRIDGE_TOKEN_SECRET || 'default-secret-change-in-production';
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('[env] Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
 }
 if (!GEMINI_API_KEY) {
-  console.error('[env] Missing NEXT_PUBLIC_GEMINI_API_KEY');
+  console.error('[env] Missing GEMINI_API_KEY');
   process.exit(1);
 }
 
@@ -367,6 +368,12 @@ class CallSession {
     // Buffer to accumulate audio to reduce packet transmission rate
     this.twilioAudioBuffer = [];
 
+    // Reconnection state
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 3;
+    this.isReconnecting = false;
+    this.keepaliveInterval = null;
+
     console.log(`[session] Created – agent=${this.agentId} call=${this.callId} business=${this.businessId}`);
   }
 
@@ -382,7 +389,10 @@ class CallSession {
 
       this.geminiWs.on('open', async () => {
         console.log('[gemini] Connected');
+        this.reconnectAttempts = 0;
+        this.isReconnecting = false;
         await this._sendGeminiSetup();
+        this._startKeepalive();
         resolve();
       });
 
@@ -390,15 +400,93 @@ class CallSession {
 
       this.geminiWs.on('error', (err) => {
         console.error('[gemini] WebSocket error:', err.message);
-        this.cleanup();
+        this._handleGeminiDisconnect(err);
         reject(err);
       });
 
       this.geminiWs.on('close', (code, reason) => {
         console.log(`[gemini] Disconnected (code=${code} reason=${reason})`);
-        this.cleanup();
+        this._handleGeminiDisconnect(new Error(`Connection closed: ${code}`));
       });
     });
+  }
+
+  _startKeepalive() {
+    if (this.keepaliveInterval) clearInterval(this.keepaliveInterval);
+    
+    this.keepaliveInterval = setInterval(() => {
+      if (this.geminiWs && this.geminiWs.readyState === WebSocket.OPEN) {
+        try {
+          this.geminiWs.ping();
+        } catch (err) {
+          console.error('[gemini] Keepalive ping failed:', err.message);
+        }
+      }
+    }, 30000); // 30 seconds
+  }
+
+  async _handleGeminiDisconnect(err) {
+    if (this.isReconnecting) return;
+
+    if (this.keepaliveInterval) {
+      clearInterval(this.keepaliveInterval);
+      this.keepaliveInterval = null;
+    }
+
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('[gemini] Max reconnection attempts reached');
+      await this._playFallbackMessage();
+      this.cleanup();
+      return;
+    }
+
+    this.isReconnecting = true;
+    this.reconnectAttempts++;
+    const backoffMs = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 8000);
+    
+    console.log(`[gemini] Reconnecting (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${backoffMs}ms...`);
+
+    setTimeout(async () => {
+      try {
+        await this.connectToGemini();
+        console.log('[gemini] Reconnected successfully');
+      } catch (reconnectErr) {
+        console.error('[gemini] Reconnect failed:', reconnectErr.message);
+        this._handleGeminiDisconnect(reconnectErr);
+      }
+    }, backoffMs);
+  }
+
+  async _playFallbackMessage() {
+    if (!this.twilioWs || this.twilioWs.readyState !== WebSocket.OPEN || !this.streamSid) {
+      return;
+    }
+
+    try {
+      const fallbackText = "I'm sorry, we're experiencing technical difficulties. Please try calling again later. Goodbye.";
+      console.log('[gemini] Playing fallback message to caller');
+      
+      // Use Twilio's Say via mark event (caller will hear silence, but we log it)
+      // In production, you would use TTS to generate audio or have pre-recorded audio
+      const markMessage = {
+        event: 'mark',
+        streamSid: this.streamSid,
+        mark: {
+          name: 'fallback-message'
+        }
+      };
+      
+      this.twilioWs.send(JSON.stringify(markMessage));
+      
+      // Close the call after a delay
+      setTimeout(() => {
+        if (this.twilioWs && this.twilioWs.readyState === WebSocket.OPEN) {
+          this.twilioWs.close();
+        }
+      }, 3000);
+    } catch (err) {
+      console.error('[gemini] Failed to play fallback message:', err.message);
+    }
   }
 
   async _sendGeminiSetup() {
@@ -800,6 +888,11 @@ class CallSession {
   // ------- Cleanup -------
 
   cleanup() {
+    if (this.keepaliveInterval) {
+      clearInterval(this.keepaliveInterval);
+      this.keepaliveInterval = null;
+    }
+
     if (this.geminiWs) {
       try {
         this.geminiWs.close();
@@ -816,6 +909,7 @@ class CallSession {
 
     this.geminiReady = false;
     this.audioQueue = [];
+    this.isReconnecting = false;
   }
 }
 

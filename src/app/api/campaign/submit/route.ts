@@ -1,21 +1,87 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { z } from 'zod'
 
 const twilio = require('twilio')
 
+const campaignSubmitSchema = z.object({
+  business_id: z.string().uuid(),
+  name: z.string().min(1).max(200),
+  phone: z.string().min(10).max(20).regex(/^[\+\d\s\-\(\)]+$/),
+  notes: z.string().max(1000).optional(),
+  company: z.string().max(200).optional(),
+})
+
+// Simple in-memory rate limiter (in production, use Redis)
+const rateLimiter = new Map<string, number[]>()
+const RATE_LIMIT_WINDOW_MS = 60 * 1000 // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 5
+
+function checkRateLimit(identifier: string): boolean {
+  const now = Date.now()
+  const requests = rateLimiter.get(identifier) || []
+  
+  // Filter out old requests
+  const recentRequests = requests.filter(time => now - time < RATE_LIMIT_WINDOW_MS)
+  
+  if (recentRequests.length >= RATE_LIMIT_MAX_REQUESTS) {
+    return false
+  }
+  
+  recentRequests.push(now)
+  rateLimiter.set(identifier, recentRequests)
+  
+  // Cleanup old entries periodically
+  if (Math.random() < 0.01) {
+    for (const [key, times] of rateLimiter.entries()) {
+      if (times.every(t => now - t > RATE_LIMIT_WINDOW_MS)) {
+        rateLimiter.delete(key)
+      }
+    }
+  }
+  
+  return true
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { business_id, name, phone, notes, company } = body
-
-    if (!business_id || !name || !phone) {
+    // Rate limiting by IP
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    if (!checkRateLimit(ip)) {
       return NextResponse.json(
-        { error: 'business_id, name, and phone are required fields.' },
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      )
+    }
+
+    const body = await request.json()
+    
+    // Validate input
+    const validation = campaignSubmitSchema.safeParse(body)
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Invalid request data', details: validation.error.format() },
         { status: 400 }
       )
     }
 
+    const { business_id, name, phone, notes, company } = body
+
     const supabase = createAdminClient()
+
+    // Verify business exists
+    const { data: business, error: businessError } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('id', business_id)
+      .single()
+
+    if (businessError || !business) {
+      return NextResponse.json(
+        { error: 'Invalid business_id' },
+        { status: 400 }
+      )
+    }
 
     // 1. Create the Lead
     const { data: lead, error: leadError } = await supabase
@@ -137,18 +203,20 @@ export async function POST(request: NextRequest) {
         twilioCallSid: twilioCall.sid,
       }, { status: 201 })
       
-    } catch (twilioErr: any) {
-      console.error('Twilio Call Error:', twilioErr)
+    } catch (twilioErr: unknown) {
+      const twilioError = twilioErr as Error
+      console.error('Twilio Call Error:', twilioError)
       return NextResponse.json(
-        { success: true, leadId: lead.id, warning: `Lead created, but call failed: ${twilioErr.message}` },
+        { success: true, leadId: lead.id, warning: `Lead created, but call failed: ${twilioError.message}` },
         { status: 201 }
       )
     }
 
-  } catch (err: any) {
-    console.error('Campaign Webhook API error:', err)
+  } catch (err: unknown) {
+    const error = err as Error
+    console.error('Campaign Webhook API error:', error)
     return NextResponse.json(
-      { error: err.message || 'Internal server error' },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

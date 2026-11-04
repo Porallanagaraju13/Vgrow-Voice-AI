@@ -1,8 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const twilio = require('twilio')
+
 function generateTwiML(request: NextRequest): NextResponse {
   try {
+    // Verify Twilio signature
+    const twilioSignature = request.headers.get('x-twilio-signature')
+    const url = request.url
+    const authToken = process.env.TWILIO_AUTH_TOKEN
+
+    if (!authToken) {
+      console.error('[twilio] TWILIO_AUTH_TOKEN not configured')
+      return new NextResponse(
+        '<?xml version="1.0" encoding="UTF-8"?><Response><Say>Configuration error.</Say><Hangup /></Response>',
+        {
+          status: 500,
+          headers: { 'Content-Type': 'text/xml' },
+        }
+      )
+    }
+
+    // For TwiML requests, params come from query string
     const { searchParams } = new URL(request.url)
+    const params: Record<string, string> = {}
+    searchParams.forEach((value, key) => {
+      params[key] = value
+    })
+
+    if (twilioSignature && !twilio.validateRequest(authToken, twilioSignature, url, params)) {
+      console.error('[twilio] Invalid signature for TwiML request')
+      return new NextResponse(
+        '<?xml version="1.0" encoding="UTF-8"?><Response><Say>Authentication failed.</Say><Hangup /></Response>',
+        {
+          status: 403,
+          headers: { 'Content-Type': 'text/xml' },
+        }
+      )
+    }
+
     const agentId = searchParams.get('agentId') || ''
     const callId = searchParams.get('callId') || ''
     const businessId = searchParams.get('businessId') || ''
@@ -29,8 +64,9 @@ function generateTwiML(request: NextRequest): NextResponse {
         'Content-Type': 'text/xml',
       },
     })
-  } catch (err: any) {
-    console.error('TwiML generation error:', err)
+  } catch (err: unknown) {
+    const error = err as Error
+    console.error('TwiML generation error:', error)
     // Return a fallback TwiML that hangs up gracefully
     const fallback = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>

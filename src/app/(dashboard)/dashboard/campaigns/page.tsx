@@ -101,7 +101,7 @@ export default function CampaignsPage() {
               </CardHeader>
               <CardFooter className="bg-slate-50/50 border-t border-slate-100 flex items-center gap-2 p-4">
                 <Button 
-                  variant="default" 
+                  variant="primary" 
                   size="sm" 
                   className="flex-1 flex items-center gap-1.5"
                   onClick={() => copyLink(form.id)}
