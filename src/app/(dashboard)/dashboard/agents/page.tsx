@@ -171,7 +171,7 @@ export default function AgentsPage() {
       {/* Floating Testing Voice Widget */}
       {testAgentId && (
         <div className="fixed bottom-24 right-6 max-w-sm z-40 shadow-2xl">
-          <VoiceWidget agentId={testAgentId} geminiApiKey={business?.gemini_api_key} />
+          <VoiceWidget agentId={testAgentId} />
         </div>
       )}
 

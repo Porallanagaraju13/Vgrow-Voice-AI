@@ -31,7 +31,7 @@ function floatTo16BitPCMBase64(input: Float32Array): string {
   return window.btoa(binary)
 }
 
-export function useRealtimeVoice(agentId: string, geminiApiKey?: string) {
+export function useRealtimeVoice(agentId: string) {
   const {
     isConnected,
     isConnecting,
@@ -235,13 +235,23 @@ export function useRealtimeVoice(agentId: string, geminiApiKey?: string) {
       }
       agentConfigRef.current = agentConfig
 
-      const apiKey = geminiApiKey || agentConfig.geminiApiKey || process.env.NEXT_PUBLIC_GEMINI_API_KEY
-      if (!apiKey) {
-        throw new Error('Gemini API Key is not configured. Please add one in dashboard settings.')
+      // 2. Request ephemeral token from server
+      const tokenResponse = await fetch('/api/gemini/ephemeral-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ agentId }),
+      })
+
+      if (!tokenResponse.ok) {
+        throw new Error('Failed to obtain Gemini authentication token')
       }
 
-      // 2. Open WebSocket connection
-      const socketUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${apiKey}`
+      const { token } = await tokenResponse.json()
+
+      // 3. Open WebSocket connection with ephemeral token
+      const socketUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?token=${token}`
       const ws = new WebSocket(socketUrl)
       socketRef.current = ws
 
@@ -427,7 +437,7 @@ export function useRealtimeVoice(agentId: string, geminiApiKey?: string) {
       console.error('Call initialization failed:', err)
       disconnect()
     }
-  }, [agentId, geminiApiKey, isConnected, isConnecting, disconnect, playAudioChunk, handleToolCall, setIsConnected, setIsConnecting, setIsSpeaking, setIsListening, addMessage])
+  }, [agentId, isConnected, isConnecting, disconnect, playAudioChunk, handleToolCall, setIsConnected, setIsConnecting, setIsSpeaking, setIsListening, addMessage])
 
   // Automatically clean up on unmount
   useEffect(() => {

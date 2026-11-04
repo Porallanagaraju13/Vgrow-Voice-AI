@@ -10,12 +10,11 @@ import { Button } from '../ui/Button'
 
 interface VoiceWidgetProps {
   agentId: string
-  geminiApiKey?: string
 }
 
-export default function VoiceWidget({ agentId, geminiApiKey }: VoiceWidgetProps) {
+export default function VoiceWidget({ agentId }: VoiceWidgetProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { isConnected, isConnecting, connect, disconnect } = useRealtimeVoice(agentId, geminiApiKey)
+  const { isConnected, isConnecting, connect, disconnect } = useRealtimeVoice(agentId)
   const { messages } = useVoiceStore()
 
   const handleToggleCall = () => {

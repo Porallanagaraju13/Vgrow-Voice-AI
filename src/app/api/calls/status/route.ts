@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+const twilio = require('twilio')
+
 // Map Twilio status values to our database status enum
 function mapTwilioStatus(twilioStatus: string): string {
   const statusMap: Record<string, string> = {
@@ -19,8 +21,29 @@ function mapTwilioStatus(twilioStatus: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify Twilio signature
+    const twilioSignature = request.headers.get('x-twilio-signature')
+    const url = request.url
+    const authToken = process.env.TWILIO_AUTH_TOKEN
+
+    if (!authToken) {
+      console.error('[twilio] TWILIO_AUTH_TOKEN not configured')
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+
     // Twilio sends status callbacks as form-encoded data
     const formData = await request.formData()
+    
+    // Build params object for signature validation
+    const params: Record<string, string> = {}
+    formData.forEach((value, key) => {
+      params[key] = value.toString()
+    })
+
+    if (twilioSignature && !twilio.validateRequest(authToken, twilioSignature, url, params)) {
+      console.error('[twilio] Invalid signature for status callback')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 403 })
+    }
 
     const callSid = formData.get('CallSid') as string
     const callStatus = formData.get('CallStatus') as string
@@ -38,7 +61,7 @@ export async function POST(request: NextRequest) {
     const mappedStatus = mapTwilioStatus(callStatus)
 
     // Build the update object
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, string | number> = {
       status: mappedStatus,
     }
 
@@ -94,8 +117,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ received: true })
-  } catch (err: any) {
-    console.error('Call status webhook error:', err)
+  } catch (err: unknown) {
+    const error = err as Error
+    console.error('Call status webhook error:', error)
     // Always return 200 to prevent Twilio from retrying
     return NextResponse.json({ received: true })
   }

@@ -1,27 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { z } from 'zod'
 
-// CommonJS import — twilio doesn't ship proper ESM exports
 const twilio = require('twilio')
+
+const initiateCallSchema = z.object({
+  leadId: z.string().uuid().optional(),
+  lead_id: z.string().uuid().optional(),
+  agentId: z.string().uuid().optional(),
+  agent_id: z.string().uuid().optional(),
+  fromNumber: z.string().optional(),
+  from_number: z.string().optional(),
+}).refine(data => data.leadId || data.lead_id, {
+  message: 'leadId or lead_id is required',
+}).refine(data => data.agentId || data.agent_id, {
+  message: 'agentId or agent_id is required',
+})
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const leadId = body.leadId || body.lead_id
-    const agentId = body.agentId || body.agent_id
-    const fromNumber = body.fromNumber || body.from_number
+    // Verify authentication
+    const supabase = createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!leadId || !agentId) {
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    
+    // Validate input
+    const validation = initiateCallSchema.safeParse(body)
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'leadId (or lead_id) and agentId (or agent_id) are required' },
+        { error: 'Invalid request body', details: validation.error.format() },
         { status: 400 }
       )
     }
 
-    const supabase = createAdminClient()
+    const leadId = body.leadId || body.lead_id
+    const agentId = body.agentId || body.agent_id
+    const fromNumber = body.fromNumber || body.from_number
+
+    const adminSupabase = createAdminClient()
 
     // 1. Fetch lead details
-    const { data: lead, error: leadError } = await supabase
+    const { data: lead, error: leadError } = await adminSupabase
       .from('leads')
       .select('*')
       .eq('id', leadId)
@@ -35,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Fetch agent config
-    const { data: agent, error: agentError } = await supabase
+    const { data: agent, error: agentError } = await adminSupabase
       .from('agents')
       .select('*')
       .eq('id', agentId)
@@ -50,7 +75,12 @@ export async function POST(request: NextRequest) {
 
     const businessId = agent.business_id
 
-    // 3. Format phone numbers (add +91 prefix if needed for Indian numbers and strip symbols)
+    // 3. Verify user owns the business
+    if (businessId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    // 4. Format phone numbers (add +91 prefix if needed for Indian numbers and strip symbols)
     let toNumber = lead.phone.trim().replace(/[\s\-\(\)]/g, '')
     if (!toNumber.startsWith('+')) {
       toNumber = `+91${toNumber.replace(/^0+/, '')}`
@@ -67,8 +97,8 @@ export async function POST(request: NextRequest) {
       callerNumber = `+91${callerNumber.replace(/^0+/, '')}`
     }
 
-    // 4. Create outbound_calls record with status 'initiated'
-    const { data: callRecord, error: callError } = await supabase
+    // 5. Create outbound_calls record with status 'initiated'
+    const { data: callRecord, error: callError } = await adminSupabase
       .from('outbound_calls')
       .insert([{
         business_id: businessId,
@@ -89,7 +119,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 5. Use Twilio SDK to place the outbound call
+    // 6. Use Twilio SDK to place the outbound call
     const NGROK_URL = process.env.NGROK_URL || process.env.NEXT_PUBLIC_APP_URL
     if (!NGROK_URL) {
       return NextResponse.json(
@@ -115,8 +145,8 @@ export async function POST(request: NextRequest) {
       statusCallbackMethod: 'POST',
     })
 
-    // 6. Update outbound_calls with twilio_call_sid
-    const { error: updateError } = await supabase
+    // 7. Update outbound_calls with twilio_call_sid
+    const { error: updateError } = await adminSupabase
       .from('outbound_calls')
       .update({ twilio_call_sid: twilioCall.sid })
       .eq('id', callRecord.id)
@@ -130,22 +160,24 @@ export async function POST(request: NextRequest) {
       callId: callRecord.id,
       twilioCallSid: twilioCall.sid,
     })
-  } catch (err: any) {
-    console.error('Initiate call API error:', err)
-    if (err.code === 21219) {
+  } catch (err: unknown) {
+    const error = err as Error
+    console.error('Initiate call API error:', error)
+    const twilioError = error as { code?: number; message?: string }
+    if (twilioError.code === 21219) {
       return NextResponse.json(
         { error: 'The destination number (+91 8332970360 or whichever number you dialed) has not been verified in your Twilio Trial Account. Please add it to your Verified Caller IDs in your Twilio Console, or upgrade your Twilio account.' },
         { status: 400 }
       )
     }
-    if (err.code === 21212) {
+    if (twilioError.code === 21212) {
       return NextResponse.json(
         { error: `The caller number is invalid or not verified on your Twilio account. Please make sure you are using a number verified under "Verified Caller IDs" or a Twilio phone number purchased on your account.` },
         { status: 400 }
       )
     }
     return NextResponse.json(
-      { error: err.message || 'Internal server error' },
+      { error: twilioError.message || 'Internal server error' },
       { status: 500 }
     )
   }
