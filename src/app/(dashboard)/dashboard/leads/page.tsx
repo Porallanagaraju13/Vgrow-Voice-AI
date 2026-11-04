@@ -7,9 +7,8 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
-import { Badge } from '@/components/ui/Badge'
 import { Toast } from '@/components/ui/Toast'
-import { Users, Plus, Upload, Phone, Trash2, Edit, UserPlus, Star, PhoneOff, Clock } from 'lucide-react'
+import { Users, Plus, Upload, Phone, Trash2, Edit, UserPlus, Star } from 'lucide-react'
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -176,8 +175,9 @@ export default function LeadsPage() {
       }
       setIsAddOpen(false)
       resetForm()
-    } catch (err: any) {
-      setToastMessage(err.message || 'Error saving lead')
+    } catch (err: unknown) {
+      const error = err as Error
+      setToastMessage(error.message || 'Error saving lead')
       setToastType('error')
     } finally {
       setSaving(false)
@@ -277,8 +277,9 @@ export default function LeadsPage() {
       setIsCallOpen(false)
       // Refresh leads to get updated status
       fetchLeads()
-    } catch (err: any) {
-      setToastMessage(err.message || 'Error initiating call')
+    } catch (err: unknown) {
+      const error = err as Error
+      setToastMessage(error.message || 'Error initiating call')
       setToastType('error')
     } finally {
       setInitiating(false)

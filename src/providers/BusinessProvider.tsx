@@ -23,6 +23,7 @@ export default function BusinessProvider({ children }: { children: React.ReactNo
   } = useBusinessStore()
 
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let channel: any = null
     const supabase = createClient()
 

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
-
-const twilio = require('twilio')
+import twilio from 'twilio'
 
 const campaignSubmitSchema = z.object({
   business_id: z.string().uuid(),

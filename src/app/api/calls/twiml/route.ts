@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const twilio = require('twilio')
+import twilio from 'twilio'
 
 function generateTwiML(request: NextRequest): NextResponse {
   try {

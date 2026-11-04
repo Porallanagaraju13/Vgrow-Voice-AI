@@ -13,7 +13,7 @@ export const Tabs = ({ value, onValueChange, children, className }: TabsProps) =
     <div className={cn('space-y-4', className)}>
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child as any, { value, onValueChange })
+          return React.cloneElement(child as React.ReactElement<{ value: string; onValueChange: (v: string) => void }>, { value, onValueChange })
         }
         return child
       })}
@@ -33,9 +33,10 @@ export const TabsList = ({ children, className, value, onValueChange }: TabsList
     <div className={cn('inline-flex h-10 items-center justify-center rounded-lg bg-slate-100 p-1 text-slate-500', className)}>
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child as any, { 
+          const childEl = child as React.ReactElement<{ value: string }>
+          return React.cloneElement(childEl as React.ReactElement<{ activeValue?: string; onClick?: () => void }>, { 
             activeValue: value, 
-            onClick: () => onValueChange?.(child.props.value) 
+            onClick: () => onValueChange?.(childEl.props.value) 
           })
         }
         return child
@@ -76,8 +77,12 @@ interface TabsContentProps {
   className?: string
 }
 
-export const TabsContent = ({ value, children, className, ...props }: TabsContentProps) => {
-  const activeValue = (props as any).activeValue || (props as any).value
+interface TabsContentInternalProps extends TabsContentProps {
+  activeValue?: string
+}
+
+export const TabsContent = ({ value, children, className, ...props }: TabsContentInternalProps) => {
+  const activeValue = props.activeValue || value
   if (activeValue !== value) return null
   return <div className={cn('mt-2 focus-visible:outline-none transition-all duration-150', className)}>{children}</div>
 }

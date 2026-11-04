@@ -1,7 +1,7 @@
 'use client'
 import React, { useState } from 'react'
 import { useBusinessStore } from '@/store/business'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/Table'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal'
 
 export default function CallLogsPage() {
   const { conversations } = useBusinessStore()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedCall, setSelectedCall] = useState<any | null>(null)
 
   return (
@@ -39,6 +40,7 @@ export default function CallLogsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {/* eslint-disable @typescript-eslint/no-explicit-any */}
                 {conversations.map((call: any) => (
                   <TableRow key={call.id}>
                     <TableCell>
@@ -115,6 +117,7 @@ export default function CallLogsPage() {
               {selectedCall.transcript.length === 0 ? (
                 <p className="text-xs text-slate-400 italic">No dialogue was recorded during this call.</p>
               ) : (
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 selectedCall.transcript.map((line: any, idx: number) => (
                   <div
                     key={idx}

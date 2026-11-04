@@ -12,8 +12,9 @@ export const createClient = () => {
         getAll() {
           return cookieStore.getAll()
         },
-        setAll(cookiesToSet: any[]) {
+        setAll(cookiesToSet: unknown[]) {
           try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cookiesToSet.forEach(({ name, value, options }: any) =>
               cookieStore.set(name, value, options)
             )

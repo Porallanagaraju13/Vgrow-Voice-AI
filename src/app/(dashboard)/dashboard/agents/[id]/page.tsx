@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { useBusinessStore } from '@/store/business'
 import { agentsService } from '@/services/agents'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
@@ -21,7 +21,6 @@ const voiceOptions = [
 
 export default function AgentDetailsPage() {
   const { id } = useParams()
-  const router = useRouter()
   const { agents, updateAgent } = useBusinessStore()
   
   const agent = agents.find((a) => a.id === id)
@@ -62,6 +61,7 @@ export default function AgentDetailsPage() {
     try {
       const updated = await agentsService.updateAgent(agent.id, {
         name,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         voice: voice as any,
         system_prompt: systemPrompt,
         tonality
@@ -72,8 +72,9 @@ export default function AgentDetailsPage() {
         setToastMessage('Agent updated successfully!')
         setToastType('success')
       }
-    } catch (err: any) {
-      setToastMessage(err.message || 'Error updating agent')
+    } catch (err: unknown) {
+      const error = err as Error
+      setToastMessage(error.message || 'Error updating agent')
       setToastType('error')
     } finally {
       setLoading(false)

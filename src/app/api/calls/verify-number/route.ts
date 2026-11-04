@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// CommonJS import — twilio doesn't ship proper ESM exports
-const twilio = require('twilio')
+import twilio from 'twilio'
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,18 +37,19 @@ export async function POST(request: NextRequest) {
       callSid: validationRequest.callSid,
       phoneNumber: formattedNumber,
     })
-  } catch (err: any) {
-    console.error('Verify number API error:', err)
+  } catch (err: unknown) {
+      const error = err as Error & { code?: number }
+    console.error('Verify number API error:', error)
 
     // Handle specific Twilio errors
-    if (err.code === 21214) {
+    if (error.code === 21214) {
       return NextResponse.json(
         { error: 'This phone number is not a valid phone number.' },
         { status: 400 }
       )
     }
 
-    if (err.code === 21215) {
+    if (error.code === 21215) {
       return NextResponse.json(
         { error: 'This phone number is already verified.' },
         { status: 400 }
@@ -58,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: err.message || 'Failed to verify phone number' },
+      { error: error.message || 'Failed to verify phone number' },
       { status: 500 }
     )
   }

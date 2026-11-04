@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const formattedCalls = (calls || []).map((call: any) => ({
       ...call,
       lead_name: call.lead?.name || 'Unknown',
@@ -30,8 +31,9 @@ export async function GET(request: NextRequest) {
     }))
 
     return NextResponse.json(formattedCalls)
-  } catch (err: any) {
+  } catch (err: unknown) {
+      const error = err as Error
     console.error('Outbound calls API error:', err)
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }
