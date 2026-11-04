@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import crypto from 'crypto'
 
 // Use dynamic import for twilio since it's a CommonJS module
-let twilio: typeof import('twilio')
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let twilio: any
 
 beforeAll(async () => {
   twilio = await import('twilio')
